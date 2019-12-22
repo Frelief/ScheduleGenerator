@@ -66,15 +66,7 @@ type course struct {
 }
 
 func getCourseInfo(courseName string, session string) map[string]meetings {
-	var file string
-	switch session {
-	case year:
-		file = "./Courses/coursesY.json"
-	case fall:
-		file = "./Courses/coursesF.json"
-	case spring:
-		file = "./Courses/coursesS.json"
-	}
+	var file string = "./Courses/courses" + session + ".json"
 	jsonFile, err := os.Open(file)
 	if err != nil {
 		fmt.Println(err)
