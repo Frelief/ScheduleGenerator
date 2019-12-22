@@ -2,9 +2,11 @@ package main
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"os"
+	"strings"
 )
 
 const (
@@ -65,7 +67,7 @@ type course struct {
 	Meetings                 map[string]meetings `json:"meetings"`
 }
 
-func getCourseInfo(courseName string, session string) map[string]meetings {
+func getCourseInfo(courseName string, session string) (map[string]meetings, error) {
 	var file string = "./Courses/courses" + session + ".json"
 	jsonFile, err := os.Open(file)
 	if err != nil {
@@ -77,9 +79,14 @@ func getCourseInfo(courseName string, session string) map[string]meetings {
 	}
 	calendarMap := make(map[string]course)
 	json.Unmarshal(byteValue, &calendarMap)
-	return calendarMap[courseName].Meetings
+	for course, value := range calendarMap {
+		if strings.Contains(course, courseName) {
+			return value.Meetings, nil
+		}
+	}
+	return nil, errors.New("Course not found")
 }
 
 func main() {
-	fmt.Println(getCourseInfo("CSC207H1-F-20199", fall))
+	fmt.Println(getCourseInfo("CSC207", fall))
 }
