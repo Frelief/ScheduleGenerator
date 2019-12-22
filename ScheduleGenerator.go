@@ -1,120 +1,93 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
+	"io/ioutil"
+	"os"
 )
 
 const (
-	Year   = "Y"
-	Fall   = "F"
-	Spring = "S"
+	year   = "Y"
+	fall   = "F"
+	spring = "S"
 )
 
-type Lecture struct {
-	meetingDay string `json.meetingDay`
-	meetingStartTime string `json.meetingStartTime`
-	meetingEndTime string `json.meetingEndTime`
-	meetingScheduleId string `json.meetingScheduleId`
-	assignedRoom1 string `json.assignedRoom1`
-	assignedRoom2 string `json.assignedRoom2`
+type lecture struct {
+	MeetingDay        string `json:"meetingDay"`
+	MeetingStartTime  string `json:"meetingStartTime"`
+	MeetingEndTime    string `json:"meetingEndTime"`
+	MeetingScheduleID string `json:"meetingScheduleId"`
+	AssignedRoom1     string `json:"assignedRoom1"`
+	AssignedRoom2     string `json:"assignedRoom2"`
 }
 
-type Instructors struct {
-	instructorID string `json.instructorId`
-	firstName string `json.firstName`
-	lastName string `json.lastName`
+type instructors struct {
+	InstructorID string `json:"instructorId"`
+	FirstName    string `json:"firstName"`
+	LastName     string `json:"lastName"`
 }
 
-type Meetings struct {
-	schedule []Lecture `json.schedule`
-	instructors []Instructors `json.instructors`
-	meetingID string `json.meetingId`
-	teachingMethod string `json.teachingMethod`
-	sectionNumber string `json.sectionNumber`
-	
-	"teachingMethod": "LEC",
-	"sectionNumber": "0101",
-	"subtitle": "",
-	"cancel": "",
-	"waitlist": "N",
-	"online": "",
-	"enrollmentCapacity": "300",
-	"actualEnrolment": "170",
-	"actualWaitlist": "0",
-	"enrollmentIndicator": "E",
-	"meetingStatusNotes": null,
-	"enrollmentControls": []
+type meetings struct {
+	Schedule            map[string]lecture     `json:"schedule"`
+	Instructors         map[string]instructors `json:"instructors"`
+	MeetingID           string                 `json:"meetingId"`
+	TeachingMethod      string                 `json:"teachingMethod"`
+	SectionNumber       string                 `json:"sectionNumber"`
+	Subtitle            string                 `json:"subtitle"`
+	Cancel              string                 `json:"cancel"`
+	Waitlist            string                 `json:"waitlist"`
+	Online              string                 `json:"online"`
+	EnrollmentCapacity  string                 `json:"enrollmentCapacity"`
+	ActualEnrolment     string                 `json:"actualEnrolment"`
+	ActualWaitlist      string                 `json:"actualWaitlist"`
+	EnrollmentIndicator string                 `json:"enrollmentIndicator"`
+	MeetingStatusNotes  string                 `json:"meetingStatusNotes,omitempty"`
+	EnrollmentControls  string                 `json:"enrollmentControls"` // This is actually a list of things, we need to expand if we want to use anything from here
 }
 
-type Course struct {
-	courseID string `json:courseId`
-	org string `json:org`
-	orgName string `json:orgName`
-	courseTitle string `json:courseTitle`
-	code string `json:code`
-	courseDescription string `json:courseDescription`
-	prerequisite string `json.prerequisite`
-	corequisite string `json.corequisite`
-	exclusion string `json.exclusion`
-	recommendedPreparation string `json.recommendedPreparation`
-	section string `json.section`
-	session string `json.session`
-	webTimetableInstructions string `json.webTimetableInstructions`
-	breadthCategories string `json.breadthCategories`
-	distributionCategories string `json.distributionCategories`
-	meetings
-        "section": "Y",
-        "session": "20199",
-        "webTimetableInstructions": "This course is only open to students admitted to the Vic One program (http:\/\/www.vic.utoronto.ca\/Future_Students\/vicone.htm).",
-        "breadthCategories": "",
-        "distributionCategories": "",
-        "meetings": {
-            "LEC-0101": {
-                "schedule": {
-                    "WE-163117": {
-                        "meetingDay": "WE",
-                        "meetingStartTime": "16:00",
-                        "meetingEndTime": "18:00",
-                        "meetingScheduleId": "163117",
-                        "assignedRoom1": "BT 101",
-                        "assignedRoom2": "BT 101"
-                    }
-                },
-                "instructors": [],
-                "meetingId": "103406",
-                "teachingMethod": "LEC",
-                "sectionNumber": "0101",
-                "subtitle": "",
-                "cancel": "",
-                "waitlist": "N",
-                "online": "",
-                "enrollmentCapacity": "300",
-                "actualEnrolment": "170",
-                "actualWaitlist": "0",
-                "enrollmentIndicator": "E",
-                "meetingStatusNotes": null,
-                "enrollmentControls": []
-            }
-        }
+type course struct {
+	CourseID                 string              `json:"courseId"`
+	Org                      string              `json:"org"`
+	OrgName                  string              `json:"orgName"`
+	CourseTitle              string              `json:"courseTitle"`
+	Code                     string              `json:"code"`
+	CourseDescription        string              `json:"courseDescription"`
+	Prerequisite             string              `json:"prerequisite"`
+	Corequisite              string              `json:"corequisite"`
+	Exclusion                string              `json:"exclusion"`
+	RecommendedPreparation   string              `json:"recommendedPreparation"`
+	Section                  string              `json:"section"`
+	Session                  string              `json:"session"`
+	WebTimetableInstructions string              `json:"webTimetableInstructions"`
+	BreadthCategories        string              `json:"breadthCategories"`
+	DistributionCategories   string              `json:"distributionCategories"`
+	Meetings                 map[string]meetings `json:"meetings"`
 }
 
-func getCourseInfo(course string, session string) string {
+func getCourseInfo(courseName string, session string) map[string]meetings {
 	var file string
 	switch session {
-	case Year:
-		file = "/Courses/coursesY.json"
-	case Fall:
-		file = "/Courses/coursesF.json"
-	case Spring:
-		file = "/Courses/coursesS.json"
+	case year:
+		file = "./Courses/coursesY.json"
+	case fall:
+		file = "./Courses/coursesF.json"
+	case spring:
+		file = "./Courses/coursesS.json"
 	}
 	jsonFile, err := os.Open(file)
 	if err != nil {
 		fmt.Println(err)
 	}
-	return file
+	byteValue, err := ioutil.ReadAll(jsonFile)
+	if err != nil {
+		fmt.Println(err)
+	}
+	calendarMap := make(map[string]course)
+	json.Unmarshal(byteValue, &calendarMap)
+	return calendarMap[courseName].Meetings
 }
 
 func main() {
-	fmt.Println(getCourseInfo("CSC207", Fall))
+	fmt.Println(getCourseInfo("CSC207H1-F-20199", fall))
 }
