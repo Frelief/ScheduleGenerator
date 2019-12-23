@@ -1,11 +1,13 @@
 package main
 
 import (
+	"bufio"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"io/ioutil"
 	"os"
+	"strconv"
 	"strings"
 )
 
@@ -87,6 +89,27 @@ func getCourseInfo(courseName string, session string) (map[string]meetings, erro
 	return nil, errors.New("Course not found")
 }
 
+func buildSchedule() []map[string]meetings {
+	fmt.Println("How many courses do you wish to take?")
+	reader := bufio.NewReader(os.Stdin)
+	text, _ := reader.ReadString('\n')
+	numCourse, _ := strconv.Atoi(strings.Split(text, "\n")[0])
+	courseInfoArray := make([]map[string]meetings, numCourse)
+	for index := 0; index < numCourse; index++ {
+		fmt.Println("Course number", index)
+		reader := bufio.NewReader(os.Stdin)
+		text, _ := reader.ReadString('\n')
+		temp := strings.Split(text, "\n")
+		var err error
+		courseInfoArray[index], err = getCourseInfo(temp[0], fall)
+		if err != nil {
+			fmt.Println(err)
+			index--
+		}
+	}
+	return courseInfoArray
+}
+
 func main() {
-	fmt.Println(getCourseInfo("CSC207", fall))
+	buildSchedule()
 }
