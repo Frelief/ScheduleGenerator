@@ -71,9 +71,23 @@ type course struct {
 }
 
 type schedule struct {
-	Courses  []string
-	Semester string
-	Classes  map[string]meeting
+	Courses []string
+	Classes map[string]meeting
+}
+
+func createSchedule() schedule {
+	sched := schedule{}
+	sched.Classes = make(map[string]meeting)
+	return sched
+}
+
+func (sched schedule) copySchedule() schedule {
+	copiedSchedule := createSchedule()
+	copy(copiedSchedule.Courses, sched.Courses)
+	for k, v := range sched.Classes {
+		copiedSchedule.Classes[k] = v
+	}
+	return copiedSchedule
 }
 
 func (sched schedule) checkConflict(newMeeting meeting) bool {
@@ -93,7 +107,12 @@ func (sched schedule) checkConflict(newMeeting meeting) bool {
 	return true
 }
 
-func getCourseInfo(courseName string, session string) (map[string]meeting, error) {
+func (sched *schedule) addClass(courseName string, newMeeting meeting) {
+	sched.Courses = append(sched.Courses, courseName)
+	sched.Classes[courseName] = newMeeting
+}
+
+func getCourseInfo(courseName string, session string) (map[string]map[string]meeting, error) {
 	var file string = "./Courses/courses" + session + ".json"
 	jsonFile, err := os.Open(file)
 	if err != nil {
@@ -105,48 +124,63 @@ func getCourseInfo(courseName string, session string) (map[string]meeting, error
 	}
 	calendarMap := make(map[string]course)
 	json.Unmarshal(byteValue, &calendarMap)
+	courseMap := make(map[string]map[string]meeting)
 	for course, value := range calendarMap {
 		if strings.Contains(course, courseName) {
-			return value.Meetings, nil
+			courseMap[course] = value.Meetings
+			return courseMap, nil
 		}
 	}
 	return nil, errors.New("Course not found")
 }
 
-func getAllCourses() []map[string]meeting {
+func getAllCourses() []map[string]map[string]meeting {
 	fmt.Println("How many courses do you wish to take?")
 	reader := bufio.NewReader(os.Stdin)
 	text, _ := reader.ReadString('\n')
 	numCourse, _ := strconv.Atoi(strings.Split(text, "\n")[0])
-	coursesInfoArray := make([]map[string]meeting, numCourse)
+	coursesInfoArray := make([]map[string]map[string]meeting, numCourse)
 	for index := 0; index < numCourse; index++ {
 		fmt.Println("Course number", index)
 		reader := bufio.NewReader(os.Stdin)
 		text, _ := reader.ReadString('\n')
 		temp := strings.Split(text, "\n")
 		var err error
-		coursesInfoArray[index], err = getCourseInfo(temp[0], fall)
+		meetingMap, err := getCourseInfo(temp[0], fall)
 		if err != nil {
 			fmt.Println(err)
 			index--
+		} else {
+			coursesInfoArray[index] = meetingMap
 		}
 	}
 	return coursesInfoArray
 }
 
-func buildAllSchedules(coursesInfoArray []map[string]meeting) {
-	numCourse := len(coursesInfoArray)
-	for index := 0; index < numCourse; index++ {
-
+func buildAllSchedules(sched schedule, coursesInfoArray []map[string]map[string]meeting) []schedule {
+	var schedArray []schedule
+	for courseName, meetings := range coursesInfoArray[0] {
+		for _, class := range meetings {
+			schedCopy := sched.copySchedule()
+			if schedCopy.checkConflict(class) {
+				schedCopy.addClass(courseName, class)
+				if len(coursesInfoArray) > 1 {
+					schedArray = append(schedArray, buildAllSchedules(schedCopy, coursesInfoArray[1:])...)
+				} else {
+					schedArray = append(schedArray, schedCopy)
+				}
+			}
+		}
 	}
+	return schedArray
 }
 
 func main() {
-	testCourse, _ := getCourseInfo("CSC207", "F")
-	var sched = map[string]meeting{"LEC-0101": testCourse["LEC-0101"]}
-	fmt.Println(sched)
-	testSchedule := schedule{Classes: sched}
-
-	fmt.Println(testSchedule.checkConflict(testCourse["LEC-0101"]))
-
+	testSchedule := createSchedule()
+	for index, element := range buildAllSchedules(testSchedule, getAllCourses()) {
+		// fmt.Println(buildAllSchedules(testSchedule, getAllCourses()))
+		fmt.Println("Schedule", index)
+		fmt.Println(element.Courses)
+		fmt.Println(element.Classes)
+	}
 }
