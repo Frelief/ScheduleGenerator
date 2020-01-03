@@ -16,6 +16,9 @@ const (
 	year   = "Y"
 	fall   = "F"
 	spring = "S"
+	lec    = "LEC"
+	tut    = "TUT"
+	pra    = "PRA"
 )
 
 type lecture struct {
@@ -87,6 +90,7 @@ func (sched schedule) copySchedule() schedule {
 	for k, v := range sched.Classes {
 		copiedSchedule.Classes[k] = v
 	}
+	copiedSchedule.Courses = sched.Courses
 	return copiedSchedule
 }
 
@@ -112,7 +116,29 @@ func (sched *schedule) addClass(courseName string, newMeeting meeting) {
 	sched.Classes[courseName] = newMeeting
 }
 
-func getCourseInfo(courseName string, session string) (map[string]map[string]meeting, error) {
+/*
+Meetings can be either Lectures, Tutorials or Practicals. In each case we need to enroll in one of each
+*/
+func separateMeetingTypes(meetings map[string]meeting) (map[string]meeting, map[string]meeting, map[string]meeting, error) {
+	lectureMap := make(map[string]meeting)
+	tutorialMap := make(map[string]meeting)
+	practicalMap := make(map[string]meeting)
+
+	for meetingName, meeting := range meetings {
+		if meeting.TeachingMethod == lec {
+			lectureMap[meetingName] = meeting
+		} else if meeting.TeachingMethod == tut {
+			tutorialMap[meetingName] = meeting
+		} else if meeting.TeachingMethod == pra {
+			practicalMap[meetingName] = meeting
+		} else {
+			return nil, nil, nil, errors.New("Unexpected teaching method: " + meeting.TeachingMethod)
+		}
+	}
+	return lectureMap, tutorialMap, practicalMap, nil
+}
+
+func getCourseInfo(courseName string, session string) ([]map[string]map[string]meeting, error) {
 	var file string = "./Courses/courses" + session + ".json"
 	jsonFile, err := os.Open(file)
 	if err != nil {
@@ -124,11 +150,29 @@ func getCourseInfo(courseName string, session string) (map[string]map[string]mee
 	}
 	calendarMap := make(map[string]course)
 	json.Unmarshal(byteValue, &calendarMap)
-	courseMap := make(map[string]map[string]meeting)
+	var courseArray []map[string]map[string]meeting
 	for course, value := range calendarMap {
 		if strings.Contains(course, courseName) {
-			courseMap[course] = value.Meetings
-			return courseMap, nil
+			lectureMap, tutorialMap, practicalMap, err := separateMeetingTypes(value.Meetings)
+			if err != nil {
+				return nil, err
+			}
+			if len(lectureMap) != 0 {
+				courseMap := make(map[string]map[string]meeting)
+				courseMap[course+lec] = lectureMap
+				courseArray = append(courseArray, courseMap)
+			}
+			if len(tutorialMap) != 0 {
+				courseMap := make(map[string]map[string]meeting)
+				courseMap[course+tut] = tutorialMap
+				courseArray = append(courseArray, courseMap)
+			}
+			if len(practicalMap) != 0 {
+				courseMap := make(map[string]map[string]meeting)
+				courseMap[course+pra] = practicalMap
+				courseArray = append(courseArray, courseMap)
+			}
+			return courseArray, nil
 		}
 	}
 	return nil, errors.New("Course not found")
@@ -139,19 +183,19 @@ func getAllCourses() []map[string]map[string]meeting {
 	reader := bufio.NewReader(os.Stdin)
 	text, _ := reader.ReadString('\n')
 	numCourse, _ := strconv.Atoi(strings.Split(text, "\n")[0])
-	coursesInfoArray := make([]map[string]map[string]meeting, numCourse)
+	// coursesInfoArray := make([]map[string]map[string]meeting, numCourse)
+	var coursesInfoArray []map[string]map[string]meeting
 	for index := 0; index < numCourse; index++ {
 		fmt.Println("Course number", index)
 		reader := bufio.NewReader(os.Stdin)
 		text, _ := reader.ReadString('\n')
 		temp := strings.Split(text, "\n")
-		var err error
 		meetingMap, err := getCourseInfo(temp[0], fall)
 		if err != nil {
 			fmt.Println(err)
 			index--
 		} else {
-			coursesInfoArray[index] = meetingMap
+			coursesInfoArray = append(coursesInfoArray, meetingMap...)
 		}
 	}
 	return coursesInfoArray
@@ -177,6 +221,7 @@ func buildAllSchedules(sched schedule, coursesInfoArray []map[string]map[string]
 
 func main() {
 	testSchedule := createSchedule()
+	// buildAllSchedules(testSchedule, getAllCourses())
 	for index, element := range buildAllSchedules(testSchedule, getAllCourses()) {
 		// fmt.Println(buildAllSchedules(testSchedule, getAllCourses()))
 		fmt.Println("Schedule", index)
