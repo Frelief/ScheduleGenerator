@@ -78,6 +78,9 @@ type schedule struct {
 	Classes map[string]meeting
 }
 
+// ListOfSchedules is a list of schedules
+var ListOfSchedules []schedule
+
 func createSchedule() schedule {
 	sched := schedule{}
 	sched.Classes = make(map[string]meeting)
@@ -94,7 +97,7 @@ func (sched schedule) copySchedule() schedule {
 	return copiedSchedule
 }
 
-func (sched schedule) checkConflict(newMeeting meeting) bool {
+func (sched schedule) checkNoConflict(newMeeting meeting) bool {
 	for _, meeting := range sched.Classes {
 		for _, newLecture := range newMeeting.Schedule {
 			for _, lecture := range meeting.Schedule {
@@ -139,6 +142,9 @@ func separateMeetingTypes(meetings map[string]meeting) (map[string]meeting, map[
 }
 
 func getCourseInfo(courseName string, session string) ([]map[string]map[string]meeting, error) {
+	if session != fall && session != spring && session != year {
+		return nil, errors.New("Unknown semester: " + session)
+	}
 	var file string = "./Courses/courses" + session + ".json"
 	jsonFile, err := os.Open(file)
 	if err != nil {
@@ -186,11 +192,15 @@ func getAllCourses() []map[string]map[string]meeting {
 	// coursesInfoArray := make([]map[string]map[string]meeting, numCourse)
 	var coursesInfoArray []map[string]map[string]meeting
 	for index := 0; index < numCourse; index++ {
-		fmt.Println("Course number", index)
+		fmt.Println("Course code", index)
 		reader := bufio.NewReader(os.Stdin)
 		text, _ := reader.ReadString('\n')
-		temp := strings.Split(text, "\n")
-		meetingMap, err := getCourseInfo(temp[0], fall)
+		courseCode := strings.Split(text, "\n")
+
+		fmt.Println("Which semester? F S Y")
+		text, _ = reader.ReadString('\n')
+		semester := strings.Split(text, "\n")
+		meetingMap, err := getCourseInfo(courseCode[0], semester[0])
 		if err != nil {
 			fmt.Println(err)
 			index--
@@ -201,31 +211,69 @@ func getAllCourses() []map[string]map[string]meeting {
 	return coursesInfoArray
 }
 
-func buildAllSchedules(sched schedule, coursesInfoArray []map[string]map[string]meeting) []schedule {
-	var schedArray []schedule
-	for courseName, meetings := range coursesInfoArray[0] {
-		for _, class := range meetings {
-			schedCopy := sched.copySchedule()
-			if schedCopy.checkConflict(class) {
-				schedCopy.addClass(courseName, class)
-				if len(coursesInfoArray) > 1 {
-					schedArray = append(schedArray, buildAllSchedules(schedCopy, coursesInfoArray[1:])...)
-				} else {
-					schedArray = append(schedArray, schedCopy)
-				}
-			}
+func testMethod(sched schedule, schedArray []schedule, class meeting, courseName string, coursesInfoArray []map[string]map[string]meeting) []schedule {
+	schedCopy := sched.copySchedule()
+	if schedCopy.checkNoConflict(class) {
+		schedCopy.addClass(courseName, class)
+		if len(coursesInfoArray) > 1 {
+			schedArray = append(schedArray, buildAllSchedules(schedCopy, coursesInfoArray[1:])...)
+		} else {
+			schedArray = append(schedArray, schedCopy)
 		}
 	}
 	return schedArray
 }
 
+func buildAllSchedules(sched schedule, coursesInfoArray []map[string]map[string]meeting) []schedule {
+	var schedArray []schedule
+	for courseName, meetings := range coursesInfoArray[0] {
+		for _, class := range meetings {
+			temp := testMethod(sched, schedArray, class, courseName, coursesInfoArray)
+			schedArray = temp
+		}
+	}
+	return schedArray
+}
+
+func addToListOfSchedules(sched schedule) {
+	fmt.Println("Yo")
+	ListOfSchedules = append(ListOfSchedules, sched)
+}
+
+func addToSchedule(sched schedule, courseInfoArray []map[string]map[string]meeting) {
+	fmt.Println(len(courseInfoArray))
+	if len(courseInfoArray) == 0 {
+		addToListOfSchedules(sched)
+	} else {
+		fmt.Println("Yo1")
+		nextClass := courseInfoArray[0]
+		newCourseInfoArray := courseInfoArray[1:]
+		for courseName, meetings := range nextClass {
+			for _, class := range meetings {
+				newSchedule := sched.copySchedule()
+				fmt.Println("Yo2")
+				if newSchedule.checkNoConflict(class) {
+					fmt.Println("Yo3")
+					newSchedule.addClass(courseName, class)
+					go addToSchedule(newSchedule, newCourseInfoArray)
+				}
+			}
+		}
+	}
+}
+
 func main() {
 	testSchedule := createSchedule()
 	// buildAllSchedules(testSchedule, getAllCourses())
-	for index, element := range buildAllSchedules(testSchedule, getAllCourses()) {
-		// fmt.Println(buildAllSchedules(testSchedule, getAllCourses()))
-		fmt.Println("Schedule", index)
-		fmt.Println(element.Courses)
-		fmt.Println(element.Classes)
-	}
+	fmt.Println(ListOfSchedules)
+	addToSchedule(testSchedule, getAllCourses())
+	fmt.Println(ListOfSchedules)
+	/*
+		for index, element := range ListOfSchedules {
+			// fmt.Println(buildAllSchedules(testSchedule, getAllCourses()))
+			fmt.Println("Schedule", index)
+			fmt.Println(element.Courses)
+			fmt.Println(element.Classes)
+		}
+	*/
 }
