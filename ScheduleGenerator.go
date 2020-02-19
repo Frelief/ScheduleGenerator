@@ -81,6 +81,7 @@ type schedule struct {
 // ListOfSchedules is a list of schedules
 var ListOfSchedules []schedule
 
+//TODO: make this pointer instead of object
 func createSchedule() schedule {
 	sched := schedule{}
 	sched.Classes = make(map[string]meeting)
@@ -97,6 +98,7 @@ func (sched schedule) copySchedule() schedule {
 	return copiedSchedule
 }
 
+//TODO: implement schedule check via 263 tutorial
 func (sched schedule) checkNoConflict(newMeeting meeting) bool {
 	for _, meeting := range sched.Classes {
 		for _, newLecture := range newMeeting.Schedule {
@@ -127,6 +129,7 @@ func separateMeetingTypes(meetings map[string]meeting) (map[string]meeting, map[
 	tutorialMap := make(map[string]meeting)
 	practicalMap := make(map[string]meeting)
 
+	//TODO: Case Statment?
 	for meetingName, meeting := range meetings {
 		if meeting.TeachingMethod == lec {
 			lectureMap[meetingName] = meeting
