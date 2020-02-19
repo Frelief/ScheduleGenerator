@@ -129,15 +129,15 @@ func separateMeetingTypes(meetings map[string]meeting) (map[string]meeting, map[
 	tutorialMap := make(map[string]meeting)
 	practicalMap := make(map[string]meeting)
 
-	//TODO: Case Statment?
 	for meetingName, meeting := range meetings {
-		if meeting.TeachingMethod == lec {
+		switch meeting.TeachingMethod {
+		case lec:
 			lectureMap[meetingName] = meeting
-		} else if meeting.TeachingMethod == tut {
+		case tut:
 			tutorialMap[meetingName] = meeting
-		} else if meeting.TeachingMethod == pra {
+		case pra:
 			practicalMap[meetingName] = meeting
-		} else {
+		default:
 			return nil, nil, nil, errors.New("Unexpected teaching method: " + meeting.TeachingMethod)
 		}
 	}
@@ -166,21 +166,18 @@ func getCourseInfo(courseName string, session string) ([]map[string]map[string]m
 			if err != nil {
 				return nil, err
 			}
-			if len(lectureMap) != 0 {
-				courseMap := make(map[string]map[string]meeting)
-				courseMap[course+lec] = lectureMap
-				courseArray = append(courseArray, courseMap)
+
+			//Maps Meeting Types to their respective Meeting Maps
+			meetingTypesToMeetingMaps := map[string](map[string]meeting){lec: lectureMap, tut: tutorialMap, pra: practicalMap}
+
+			for meetingType, meetingMap := range meetingTypesToMeetingMaps {
+				if len(meetingMap) != 0 {
+					courseMap := make(map[string]map[string]meeting)
+					courseMap[course+meetingType] = meetingMap
+					courseArray = append(courseArray, courseMap)
+				}
 			}
-			if len(tutorialMap) != 0 {
-				courseMap := make(map[string]map[string]meeting)
-				courseMap[course+tut] = tutorialMap
-				courseArray = append(courseArray, courseMap)
-			}
-			if len(practicalMap) != 0 {
-				courseMap := make(map[string]map[string]meeting)
-				courseMap[course+pra] = practicalMap
-				courseArray = append(courseArray, courseMap)
-			}
+
 			return courseArray, nil
 		}
 	}
