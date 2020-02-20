@@ -99,6 +99,10 @@ func (sched schedule) copySchedule() schedule {
 }
 
 //TODO: implement schedule check via 263 tutorial
+/*
+* schedule.checkNoConflict checks whether the meeting newMeeting would conflict with the meetings
+* already inside the schedule. Returns false if there is a conflict.
+ */
 func (sched schedule) checkNoConflict(newMeeting meeting) bool {
 	for _, meeting := range sched.Classes {
 		for _, newLecture := range newMeeting.Schedule {
@@ -116,6 +120,10 @@ func (sched schedule) checkNoConflict(newMeeting meeting) bool {
 	return true
 }
 
+/*
+* schedule.addClass adds a meeting newMeeting to the schedule, with name courseName.
+*
+ */
 func (sched *schedule) addClass(courseName string, newMeeting meeting) {
 	sched.Courses = append(sched.Courses, courseName)
 	sched.Classes[courseName] = newMeeting
@@ -144,6 +152,10 @@ func separateMeetingTypes(meetings map[string]meeting) (map[string]meeting, map[
 	return lectureMap, tutorialMap, practicalMap, nil
 }
 
+/*
+* getCourseInfo returns the information for the course courseName during the session session.
+* returns an error if it cannot find the course.
+ */
 func getCourseInfo(courseName string, session string) ([]map[string]map[string]meeting, error) {
 	if session != fall && session != spring && session != year {
 		return nil, errors.New("Unknown semester: " + session)
@@ -187,6 +199,10 @@ func getCourseInfo(courseName string, session string) ([]map[string]map[string]m
 	return nil, errors.New("Course not found")
 }
 
+/*
+* getAllCourses returns a map of all the courses the user wants to take based on input
+*
+ */
 func getAllCourses() []map[string]map[string]meeting {
 	fmt.Println("How many courses do you wish to take?")
 	reader := bufio.NewReader(os.Stdin)
@@ -214,6 +230,7 @@ func getAllCourses() []map[string]map[string]meeting {
 	return coursesInfoArray
 }
 
+//TODO: merge into buildAllSchedules?
 func testMethod(sched schedule, schedArray []schedule, class meeting, courseName string, coursesInfoArray []map[string]map[string]meeting) []schedule {
 	schedCopy := sched.copySchedule()
 	if schedCopy.checkNoConflict(class) {
@@ -227,6 +244,10 @@ func testMethod(sched schedule, schedArray []schedule, class meeting, courseName
 	return schedArray
 }
 
+/*
+* buildAllSchedules buils all possible schedules without any conflict
+*
+ */
 func buildAllSchedules(sched schedule, coursesInfoArray []map[string]map[string]meeting) []schedule {
 	var schedArray []schedule
 	for courseName, meetings := range coursesInfoArray[0] {
@@ -238,25 +259,27 @@ func buildAllSchedules(sched schedule, coursesInfoArray []map[string]map[string]
 	return schedArray
 }
 
+/*
+* addToListOfSchedules appends schedule to ListOfSchedules public array
+ */
 func addToListOfSchedules(sched schedule) {
-	fmt.Println("Yo")
 	ListOfSchedules = append(ListOfSchedules, sched)
 }
 
+/*
+* addToSchedule makes all the possible schedules?
+ */
 func addToSchedule(sched schedule, courseInfoArray []map[string]map[string]meeting) {
 	fmt.Println(len(courseInfoArray))
 	if len(courseInfoArray) == 0 {
 		addToListOfSchedules(sched)
 	} else {
-		fmt.Println("Yo1")
 		nextClass := courseInfoArray[0]
 		newCourseInfoArray := courseInfoArray[1:]
 		for courseName, meetings := range nextClass {
 			for _, class := range meetings {
 				newSchedule := sched.copySchedule()
-				fmt.Println("Yo2")
 				if newSchedule.checkNoConflict(class) {
-					fmt.Println("Yo3")
 					newSchedule.addClass(courseName, class)
 					go addToSchedule(newSchedule, newCourseInfoArray)
 				}
