@@ -227,35 +227,6 @@ func getAllCourses() []map[string]map[string]meeting {
 	return coursesInfoArray
 }
 
-//TODO: merge into buildAllSchedules?
-func testMethod(sched schedule, schedArray []schedule, class meeting, courseName string, coursesInfoArray []map[string]map[string]meeting) []schedule {
-	schedCopy := sched.copySchedule()
-	if schedCopy.checkNoConflict(class) {
-		schedCopy.addClass(courseName, class)
-		if len(coursesInfoArray) > 1 {
-			schedArray = append(schedArray, buildAllSchedules(schedCopy, coursesInfoArray[1:])...)
-		} else {
-			schedArray = append(schedArray, schedCopy)
-		}
-	}
-	return schedArray
-}
-
-/*
-* buildAllSchedules buils all possible schedules without any conflict
-*
- */
-func buildAllSchedules(sched schedule, coursesInfoArray []map[string]map[string]meeting) []schedule {
-	var schedArray []schedule
-	for courseName, meetings := range coursesInfoArray[0] {
-		for _, class := range meetings {
-			temp := testMethod(sched, schedArray, class, courseName, coursesInfoArray)
-			schedArray = temp
-		}
-	}
-	return schedArray
-}
-
 /*
 * addToListOfSchedules appends schedule to ListOfSchedules public array
  */
@@ -264,7 +235,7 @@ func addToListOfSchedules(sched schedule) {
 }
 
 /*
-* addToSchedule makes all the possible schedules?
+* addToSchedule makes all the possible schedules without any conflict
  */
 func addToSchedule(sched schedule, courseInfoArray []map[string]map[string]meeting) {
 	fmt.Println(len(courseInfoArray))
